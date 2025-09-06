@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Movie Recommender</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f4f4f4;
+            color: #333;
+        }
+        .container {
+            max-width: 600px;
+            margin: 50px auto;
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+        h1 {
+            color: #0056b3;
+            margin-bottom: 20px;
+        }
+        form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-bottom: 20px;
+            align-items: center;
+        }
+        input[type="text"] {
+            padding: 10px;
+            width: 80%;
+            max-width: 300px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        button {
+            padding: 12px 25px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s ease;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        #recommendations-section {
+            margin-top: 30px;
+            padding: 20px;
+            background-color: #e9ecef;
+            border-radius: 8px;
+            text-align: left;
+        }
+        #recommendations-section h2 {
+            color: #0056b3;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        #recommendations-list {
+            list-style: none;
+            padding: 0;
+            max-height: 300px; /* Limit height for scrollability */
+            overflow-y: auto; /* Add scroll if content overflows */
+        }
+        #recommendations-list li {
+            background-color: #fff;
+            margin-bottom: 8px;
+            padding: 10px 15px;
+            border-radius: 5px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+            font-size: 16px;
+        }
+        .message {
+            color: #555;
+            font-style: italic;
+        }
+        .error-message {
+            color: #dc3545;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Movie Recommender 🎬</h1>
+        <form id="recommendationForm">
+            <input type="text" id="movieTitle" name="movie_title" placeholder="Enter a movie title (e.g., Toy Story)" required>
+            <button type="submit">Get Recommendations</button>
+        </form>
+
+        <div id="recommendations-section" style="display: none;">
+            <h2>Recommendations for "<span id="search-title"></span>"</h2>
+            <p id="status-message" class="message"></p>
+            <ul id="recommendations-list">
+                </ul>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('recommendationForm').addEventListener('submit', async function(event) {
+            event.preventDefault(); // Prevent default form submission
+
+            const movieTitleInput = document.getElementById('movieTitle');
+            const movieTitle = movieTitleInput.value.trim();
+            const searchTitleSpan = document.getElementById('search-title');
+            const recommendationsSection = document.getElementById('recommendations-section');
+            const recommendationsList = document.getElementById('recommendations-list');
+            const statusMessage = document.getElementById('status-message');
+
+            recommendationsList.innerHTML = ''; // Clear previous recommendations
+            statusMessage.innerHTML = ''; // Clear previous messages
+            recommendationsSection.style.display = 'block'; // Show the section
+
+            if (!movieTitle) {
+                statusMessage.className = 'error-message';
+                statusMessage.textContent = 'Please enter a movie title.';
+                return;
+            }
+
+            searchTitleSpan.textContent = movieTitle; // Update the title in the heading
+            statusMessage.className = 'message';
+            statusMessage.textContent = 'Searching for recommendations...';
+
+            try {
+                const response = await fetch('/recommend', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: `movie_title=${encodeURIComponent(movieTitle)}`
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    if (data.recommendations && data.recommendations.length > 0) {
+                        statusMessage.textContent = 'Found the following recommendations:';
+                        data.recommendations.forEach(rec => {
+                            const li = document.createElement('li');
+                            li.textContent = rec;
+                            recommendationsList.appendChild(li);
+                        });
+                    } else if (data.message) {
+                        statusMessage.className = 'message';
+                        statusMessage.textContent = data.message;
+                    } else {
+                        statusMessage.className = 'error-message';
+                        statusMessage.textContent = 'An unexpected response was received.';
+                    }
+                } else {
+                    // Handle HTTP errors (e.g., 400, 500)
+                    statusMessage.className = 'error-message';
+                    statusMessage.textContent = data.error || 'An error occurred during recommendation.';
+                }
+            } catch (error) {
+                console.error('Error fetching recommendations:', error);
+                statusMessage.className = 'error-message';
+                statusMessage.textContent = 'Failed to connect to the server or an unexpected error occurred.';
+            }
+        });
+    </script>
+</body>
+</html>

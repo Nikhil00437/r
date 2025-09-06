@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Movie Recommender</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+        }
+        .container {
+            max-width: 600px;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
+
+    <div class="container bg-white p-8 rounded-2xl shadow-xl border border-gray-200">
+        <div class="text-center mb-8">
+            <h1 class="text-3xl sm:text-4xl font-extrabold text-gray-900 mb-2">🎬 Movie Recommender 🍿</h1>
+            <p class="text-gray-500">Find your next favorite movie based on your taste.</p>
+        </div>
+
+        <!-- Input Form -->
+        <form id="recommendationForm" class="space-y-4">
+            <div class="relative">
+                <input type="text" id="movieTitle" name="movie_title" placeholder="e.g., Toy Story (1995)"
+                       class="w-full p-4 pl-12 pr-4 text-lg border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-300">
+                <svg class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+            </div>
+            <button type="submit"
+                    class="w-full bg-indigo-600 text-white py-3 rounded-xl font-semibold text-lg hover:bg-indigo-700 transition-colors duration-300 shadow-md">
+                Get Recommendations
+            </button>
+        </form>
+
+        <!-- Loading and Message Display -->
+        <div id="statusMessage" class="mt-6 text-center text-sm font-medium text-gray-600 hidden">
+            <p id="messageText"></p>
+        </div>
+
+        <!-- Recommendations List -->
+        <div id="recommendationsList" class="mt-8 space-y-4 hidden">
+            <h2 class="text-2xl font-semibold text-gray-800 border-b pb-2 mb-4">Top 10 Recommendations</h2>
+            <ul id="movieList" class="space-y-3">
+                <!-- Recommendations will be dynamically inserted here -->
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('recommendationForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const movieTitle = document.getElementById('movieTitle').value.trim();
+            const statusMessage = document.getElementById('statusMessage');
+            const messageText = document.getElementById('messageText');
+            const recommendationsList = document.getElementById('recommendationsList');
+            const movieList = document.getElementById('movieList');
+            const submitButton = document.querySelector('button[type="submit"]');
+
+            // Clear previous results
+            movieList.innerHTML = '';
+            recommendationsList.classList.add('hidden');
+            statusMessage.classList.remove('hidden');
+            messageText.textContent = 'Searching for recommendations...';
+            submitButton.disabled = true;
+            submitButton.classList.add('bg-gray-400', 'cursor-not-allowed');
+
+            try {
+                const response = await fetch('/recommend', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: `movie_title=${encodeURIComponent(movieTitle)}`
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    if (data.recommendations && data.recommendations.length > 0) {
+                        messageText.textContent = ''; // Clear loading message
+                        data.recommendations.forEach(movie => {
+                            const li = document.createElement('li');
+                            li.textContent = movie;
+                            li.className = 'p-4 bg-gray-50 rounded-lg shadow-sm text-gray-700 hover:bg-gray-100 transition-colors duration-200';
+                            movieList.appendChild(li);
+                        });
+                        recommendationsList.classList.remove('hidden');
+                        statusMessage.classList.add('hidden');
+                    } else {
+                        // Handle the case where the movie is not found or no recommendations
+                        messageText.textContent = data.message || `No recommendations found for "${movieTitle}". Please try another title.`;
+                    }
+                } else {
+                    // Handle server-side errors (e.g., 400, 500)
+                    messageText.textContent = data.error || 'An error occurred. Please try again later.';
+                }
+            } catch (error) {
+                console.error('Fetch error:', error);
+                messageText.textContent = 'Failed to connect to the server. Please check your network and try again.';
+            } finally {
+                submitButton.disabled = false;
+                submitButton.classList.remove('bg-gray-400', 'cursor-not-allowed');
+            }
+        });
+    </script>
+
+</body>
+</html>
